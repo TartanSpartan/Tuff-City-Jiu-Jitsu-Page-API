@@ -1,0 +1,31 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  google_id: MyString
+  email: MyString
+  name: MyString
+  first_name: MyString
+  last_name: MyString
+  password_digest: MyString
+  dues_paid: false
+  owns_gi: false
+  has_first_aid_qualification: false
+  first_aid_achievement_date: 2025-03-15 22:14:23
+  first_aid_expiry_date: 2025-03-15 22:14:23
+  google_token: MyString
+  google_refresh_token: MyString
+
+two:
+  google_id: MyString
+  email: MyString
+  name: MyString
+  first_name: MyString
+  last_name: MyString
+  password_digest: MyString
+  dues_paid: false
+  owns_gi: false
+  has_first_aid_qualification: false
+  first_aid_achievement_date: 2025-03-15 22:14:23
+  first_aid_expiry_date: 2025-03-15 22:14:23
+  google_token: MyString
+  google_refresh_token: MyString

@@ -1,0 +1,1 @@
+Rails.application.config.session_store :cookie_store, key: '_tuff_city_jiu_jitsu_api_tablet_session'
