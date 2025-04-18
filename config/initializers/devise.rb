@@ -14,7 +14,7 @@ Devise.setup do |config|
   # confirmation, reset password and unlock tokens in the database.
   # Devise will use the `secret_key_base` as its `secret_key`
   # by default. You can change it below and use your own secret key.
-  # config.secret_key = 'fa5d2dbbadcd37997776434cfcdfcfb3c789837820a5fc0d2b520eb726bdddeac931fbe1ee381a1cd2dad72c55d378343cea3c27858650f1b1684b0a08aad8d3'
+  # config.secret_key = [REDACTED]
 
   # ==> Controller configuration
   # Configure the parent class to the devise controllers.

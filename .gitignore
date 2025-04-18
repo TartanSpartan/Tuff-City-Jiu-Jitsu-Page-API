@@ -93,3 +93,6 @@ node_modules/
 *.orig
 *~
 \#*# # Editor swap files
+
+# Ignore replace_rule file for rewriting Git commits retroactively
+replace_rule.txt
