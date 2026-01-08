@@ -37,7 +37,7 @@ Rails.application.configure do
 
   # Set localhost to be used by links generated in mailer templates.
   # config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
-  config.action_controller.default_url_options = { host: Rails.application.credentials.dig(:API, :host_alpha_2) } 
+  config.action_controller.default_url_options = { host: Rails.application.credentials.dig(:API, :host_alpha_2) }
 
   # Set allowed hosts
 

@@ -1,112 +1,113 @@
-class Api::V1::BeltGradesController < ApplicationController
-    # Note: have moved from class Api::V1::BeltGradesController < Api::ApplicationController format, hopefully that won't break but rather fix things
+class Api::V1::BeltGradesController < Api::ApplicationController
+  # This controller has the canonical order of methods, all other controllers should follow it
+  before_action :authenticate_api_v1_user!
+  # Check if the name of the following before_action is correct terminology
+  before_action :authorize_admin!, only: %i[create update destroy]
+  before_action :find_belt_grade, only: %i[show update destroy]
 
-    before_action :authenticate_user! #, except: [:index, :show]
-    # Check if the name of the following before_action is correct terminology
-    before_action :authorize_admin!, except: [:index, :show]
-    before_action :find_beltgrade, only: [:show, :update, :destroy]
-   
-    def index
-        # get all beltgrades belonging to user according to user_id
-        beltgrades = BeltGrade.where(user_id: current_user.id).order(created_at: :desc)
-        render(json: beltgrades, each_serializer: BeltGradeSerializer) # Find out what should be in this serializer
-    end 
+  rescue_from(ActiveRecord::RecordNotFound, with: :record_not_found)
+  rescue_from(ActiveRecord::RecordInvalid, with: :record_invalid)
 
-    def create
-        beltgrade = BeltGrade.new(beltgrade_params)
-
-        unless User.exists?(id: beltgrade.user_id)
-            return render json: { error: "User not found" }, status: :unprocessable_entity
-        end
-
-        if beltgrade.save
-            render json: { id: beltgrade.id }
-        else
-            render json: { errors: beltgrade.errors.full_messages }, status: :unprocessable_entity
-        end
-        # beltgrade.user = User.find_by_id session[:user_id]
-        # beltgrade.save!
+  def index
+    # Returns a list of all belt grades for an admin, or a list of the current user's belt grades for a regular user.
+    if current_api_v1_user&.is_admin?
+      belt_grades = BeltGrade.all.order(id: :desc)
+    else
+      # Scope the query to the current user's belt grades.
+      belt_grades = BeltGrade.where(user: current_api_v1_user).order(id: :desc)
     end
+    render(json: belt_grades)
+  end
 
-    def show
-        if @beltgrade
-        render(
-            json: @beltgrade
-        )
-        else
-            render(json: {error: "Belt Grade Not Found"}), status: :not_found
-        end
+  def show
+    # A regular user can only view their own belt grade. An admin can view any.
+    if @belt_grade.user == current_api_v1_user || current_api_v1_user&.is_admin?
+      render(json: @belt_grade)
+    else
+      # Deny access if the user is not the owner and is not an admin.
+      render(
+        json: {
+          status: 403,
+          errors: {
+            msg: "Access Denied"
+          }
+        },
+        status: :forbidden
+      )
     end
+  end
 
-    def update
-        if @beltgrade.update beltgrade_params
-            render json: { id: @beltgrade.id }
-        else
-            render(
-                json: { errors: beltgrade.errors.full_messages },
-                status: :unprocessable_entity
-            )
-        end
+  def create
+    # A belt grade represents "what colour of belt is a user?", so a user who's starting for the first time
+    # will have a Belt ID of 8 i.e. white belt, a club instructor is probably a brown belt so a Belt ID of 1, etc.
+    @belt_grade = BeltGrade.new(belt_grade_params)
+
+    if @belt_grade.save
+      render json: @belt_grade, status: :created
+    else
+      render json: {
+               errors: @belt_grade.errors.full_messages
+             },
+             status: :unprocessable_entity
     end
+  end
 
-    def destroy
-        if @beltgrade.destroy
-            render json: { status: 200 } 
-        else
-            render json: { error: "Unable to delete belt grade" }, status: :unprocessable_entity
-        end
+  def update
+    if @belt_grade.update(belt_grade_params)
+      render json: @belt_grade, status: :ok
+    else
+      render(
+        json: {
+          errors: @belt_grade.errors.full_messages
+        },
+        status: :unprocessable_entity
+      )
     end
+  end
 
-    # def edit
-    # end
+  def destroy
+    @belt_grade.destroy
+    # Set the status to 204 No Content for a successful deletion.
+    head :no_content
+  end
 
-    private
+  private
 
-    # TODO: Which params do we need?
-    def beltgrade_params
-        params.require(:beltgrade).permit(
-            :id,
-            :user_id,
-            :belt_id,
-            :created_at,
-            :updated_at 
-        )
+  def belt_grade_params
+    params.require(:belt_grade).permit(:user_id, :belt_id, :obtained_at)
+  end
+
+  def find_belt_grade
+    @belt_grade ||= BeltGrade.find_by!(id: params[:id])
+  end
+
+  # Renders a 404 Not Found response for missing records.
+  def record_not_found(_error)
+    render(
+      json: {
+        status: 404,
+        errors: {
+          msg: "Record Not Found"
+        }
+      },
+      status: :not_found
+    )
+  end
+
+  # Renders a 422 Unprocessable Entity response for validation errors.
+  def record_invalid(error)
+    render json: {
+             status: 422,
+             errors: error.record.errors.full_messages
+           },
+           status: :unprocessable_entity
+  end
+
+  # TODO: Add logging for admin actions (maybe they make a mistake for which belt grade to update or assign)
+
+  def authorize_admin!
+    unless current_api_v1_user&.is_admin?
+      render json: { error: "Unauthorized" }, status: :forbidden
     end
-
-    def find_beltgrade
-        @beltgrade = BeltGrade.find_by(id: params[:id])
-        render json: { error: "Belt Grade Not Found" }, status: :not_found unless @beltgrade
-    end
-
-    # TODO: retain the following two?
-
-    # def record_not_found
-    #     render(
-    #         json: { status:422, errors: {msg: "Record Not Found"} },
-    #         status: 422
-    #     )
-    # end
-
-    # def record_invalid(error)
-    #     invalid_record = error.record
-    #     errors = invalid_record.errors.map do |field, message|
-    #         {
-    #             type: error.class.to_s,
-    #             record_type: invalid_record.class.to_s,
-    #             field: field,
-    #             message: message
-    #         }
-    #     end
-    #     render(
-    #         json: { status: 422, errors:errors }
-    #     )
-    # end
-
-    #TODO: Add logging for admin actions (maybe they make a mistake for which belt grade to update or assign)
-
-    def authorize_admin!
-        unless current_user.is_admin?
-          render json: { error: "Unauthorized" }, status: :forbidden
-        end
-    end
+  end
 end

@@ -1,5 +1,12 @@
+inherit_gem:
+  syntax_tree: config/rubocop.yml
+
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+AllCops:
+  NewCops: Enable
+  SuggestExtensions: false
 
 # Overwrite or add rules to create your own house style
 #

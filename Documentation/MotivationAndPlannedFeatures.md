@@ -4,11 +4,13 @@ This project was my final piece of coursework for the CodeCore College Web Devel
 
 • Provide a resource for "translating" between the UK and Canadian versions of the martial art's syllabus, which largely overlap, but with some significant differences, of which many are poorly understood by students and instructors alike. Aiming to achieve the universal standard of "if a picture is worth a thousand words, then a video is worth a million" with side-by-side multimedia comparisons
 
+• A means of quantifying just how different one syllabus is from another, expressed in a percentage and with granular breakdowns by categories of techniques
+
 • A semantic tree map to visualise the different categories of syllabus techniques, as a memory-aid and to achieve deeper understanding
 
 • A clear and compelling recruitment tool with the joint aims of empowering the local community, to provide solidarity and strength in numbers, and to foster a welcoming and fun social scene
 
-• Incorporate a members section with content appropriately tailored according to the user's current belt grade and the next grade/qualifications they are working towards; eventually this might become more granular with 1:1 feedback and detailed technique-by-technique breakdowns
+• Incorporate a members section with content appropriately tailored according to the user's current belt grade and the next grade/qualifications they are working towards; eventually this might become more granular with 1:1 for studentsfeedback and detailed technique-by-technique breakdowns
 
 • Supplement and interface with existing social media websites for the club
 

@@ -1,9 +1,9 @@
-require_relative '../lib/request_logger'
+require_relative "../lib/request_logger"
 require_relative "boot"
 
 # require "rails/all"
 # require "action_controller/metal/request_forgery_protection"
-# require "abstract_controller/helpers" 
+# require "abstract_controller/helpers"
 # require "abstract_controller"
 
 # require "active_model/railtie"
@@ -48,23 +48,23 @@ module TuffCityJiuJitsuApiTablet
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
-    # Configuration for the application, engines, and railties goes here.
-    #
-    # These settings can be overridden in specific environments using the files
-    # in config/environments, which are processed later.
-    #
-    # config.time_zone = "Central Time (US & Canada)"
-    # config.eager_load_paths << Rails.root.join("extras")
+# Configuration for the application, engines, and railties goes here.
+#
+# These settings can be overridden in specific environments using the files
+# in config/environments, which are processed later.
+#
+# config.time_zone = "Central Time (US & Canada)"
+# config.eager_load_paths << Rails.root.join("extras")
 
-    # Only loads a smaller set of middleware suitable for API only apps.
-    # Middleware like session, flash, cookies can be added back manually.
-    # Skip views, helpers and assets when generating a new resource.
+# Only loads a smaller set of middleware suitable for API only apps.
+# Middleware like session, flash, cookies can be added back manually.
+# Skip views, helpers and assets when generating a new resource.
 #     config.api_only = true
 
 #     config.middleware.use ActionDispatch::Cookies # Required for all session management
 #     config.middleware.use ActionDispatch::Session::CookieStore
 #     # config.middleware.insert_before Warden::Manager, ActionDispatch::Session::CookieStore # Force session before Warden
-    
+
 #     # Rails.application.config.middleware.insert_before Warden::Manager, OmniAuth::Builder do
 #     # config.middleware.use OmniAuth::Builder do
 #     # config.middleware.insert_before Warden::Manager, OmniAuth::Builder do
@@ -80,10 +80,10 @@ module TuffCityJiuJitsuApiTablet
 #               additional_parameters: { "access_type" => "offline" }
 #           }
 #       }
-  
+
 #       OmniAuth.config.allowed_request_methods = [:post, :get]
 #       # OmniAuth.config.allowed_request_methods = [:post]
-#   end    
+#   end
 
 #   config.middleware.insert_before Warden::Manager, ActionDispatch::Session::CookieStore # Force session before Warden (This line might be redundant now, but let's keep it for extra assurance)
 
@@ -97,7 +97,7 @@ module TuffCityJiuJitsuApiTablet
 
 # config.api_only = true
 
-config.autoload_paths << Rails.root.join('lib')
+config.autoload_paths << Rails.root.join("lib")
 
 config.middleware.insert_after ActionDispatch::Cookies, RequestLogger
 
@@ -107,21 +107,21 @@ config.middleware.use ActionDispatch::Session::CookieStore
 
 config.middleware.insert_before Warden::Manager, OmniAuth::Builder do |builder|
   builder.provider :google_oauth2, Rails.application.credentials.dig(:API, :google_client_id), Rails.application.credentials.dig(:API, :google_client_secret), {
-      scope: 'email profile',
+      scope: "email profile",
       include_granted_scopes: true,
-      prompt: 'select_account',
-      callback_path: '/api/v1/auth/google_oauth2/callback',
+      prompt: "select_account",
+      callback_path: "/api/v1/auth/google_oauth2/callback",
       provider_ignores_state: true,
       client_options: {
           additional_parameters: { "access_type" => "offline" }
       }
   }
 
-  OmniAuth.config.allowed_request_methods = [:post, :get]
+  OmniAuth.config.allowed_request_methods = [ :post, :get ]
 end
 
 config.middleware.insert_before Warden::Manager, ActionDispatch::Session::CookieStore
 
 config.action_controller.forgery_protection_origin_check =  Rails.application.credentials.dig(:Client, :frontend_url_no_suffix)
-end
+  end
 end

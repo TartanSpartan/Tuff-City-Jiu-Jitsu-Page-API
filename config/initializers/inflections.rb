@@ -15,4 +15,9 @@
 #   inflect.acronym "RESTful"
 # end
 
-# Reminder to self: will set a rule here for the plural of syllabus, which is syllabi!
+# Here we need to instruct Rails that the plural of "syllabus" is "syllabi",
+#  important as it comes up several times in this project's files
+
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+    inflect.irregular "syllabus", "syllabi"
+end

@@ -18,7 +18,6 @@ require 'rails_helper'
 require 'omniauth'
 require 'omniauth/test'
 RSpec.configure do |config|
-
   # config.before(:each, type: :system) do
   #   Rails.application.try(:reload_routes_unless_loaded)
   # end
@@ -101,5 +100,5 @@ RSpec.configure do |config|
 =end
 
   OmniAuth.config.test_mode = true
-  # config.include Devise::Test::IntegrationHelpers, type: :request
+  config.include Devise::Test::IntegrationHelpers, type: :request
 end

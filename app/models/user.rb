@@ -1,147 +1,171 @@
-require 'googleauth'
-require 'googleauth/id_tokens'
+# Maintainers' Rubric — User
+#
+# Purpose
+# - Core account model integrating Devise authentication and Google OAuth (omniauthable).
+# - Holds training-related flags and associations used by belt/qualification logic.
+#
+# Auth & identity
+# - Devise modules: database_authenticatable, registerable, recoverable, rememberable, validatable, omniauthable.
+# - OAuth providers: google_oauth2; supports account linking via provider/uid and email matching.
+# - Password handling: skip_password_validation for OAuth flows; conditional validations
+#   based on whether a password is being changed (password_is_being_changed?).
+# - Email normalization: downcase before save.
+#
+# Domain attributes (used by validations in other models)
+# - has_first_aid_qualification (boolean) and first_aid_achievement_date (date):
+#   If the flag is true, a date is required (validated here).
+# - owns_gi (boolean): referenced by BeltGrade rules (GI ownership required for certain kyu levels).
+# - is_admin (boolean): simple role check via is_admin? helper.
+#
+# Associations
+# - Waiver: has_one (retained even if user is deleted via nullify for record-keeping).
+# - Syllabi: has_many through user_syllabi.
+# - Instructor qualifications: has_many, plus current_instructor_qualification (latest by achieved_at).
+# - Belt grades: has_many, plus current_belt_grade (latest by obtained_at).
+# - Qualifications: has_many through instructor_qualifications.
+#
+# OmniAuth flows
+# - from_omniauth(auth): verifies Google ID token and links/creates user, skipping password validation.
+# - from_google_token(id_token): API-friendly token verification path used in server-side auth.
+#
+# Validation highlights
+# - Names: presence/length/format (skipped for from_omniauth flag to support external identity).
+# - Email: presence, uniqueness (case-insensitive), format.
+# - Password: presence/min length/confirmation gated by OAuth flag and change intent.
+#
+# Notes
+# - Be mindful of cross-model domain rules (BeltGrade, InstructorQualification) that rely
+#   on user flags. Keep User’s concerns limited to auth and base profile + simple validations.
+# 
+# TODO:
+# Extract resilient name fallback: when auth.info.first_name/last_name are missing, parse
+# auth.info.name (split or sensible fallback) to populate first_name and last_name. Add tests
+# for edge cases (single names, multi-part names).
+# 
+# Keep safe credential checks: wrap access to auth[:credentials] with presence checks before
+# reading :token, :refresh_token, or :expires_at; convert expires_at to Time.at(...).to_datetime
+# defensively.
+# 
+# Preserve explicit Google payload handling: prefer payload['sub'] as the canonical Google UID,
+# and use verified token payload fields (email, given_name, family_name) rather than unverified
+# auth.info when available.
+# 
+# Retain specific error handling/logging patterns: separate rescue for
+# Google::Auth::IDTokens::VerificationError (and signature errors) to aid diagnostics; keep clear
+# log messages including context (provider, uid, email) when linking or creating accounts.
+# 
+# SecureRandom.hex are both acceptable; keep the existing approach but centralize it in one helper
+# to make intent explicit.
+# 
+# Note for refactor: move above logic into a small service Users::GoogleAuthenticator (or similar)
+# that returns a persisted or unsaved User, keeping User model thin; leave comments in user.rb
+# referencing the service extraction for future commits.
+
+require "googleauth"
+require "googleauth/id_tokens"
 # puts "--- User Model Loaded ---"
 
 class User < ApplicationRecord
-  devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable,
-         :omniauthable, omniauth_providers: [:google_oauth2] 
-        #  , :provider_ignores_state => true # This is a debug test setting for google_oauth2
+  devise :database_authenticatable,
+         :registerable,
+         :recoverable,
+         :rememberable,
+         :validatable,
+         :omniauthable,
+         omniauth_providers: [:google_oauth2]
+  #  , :provider_ignores_state => true # This is a debug test setting for google_oauth2
 
-  has_one :waiver, dependent: :nullify # We will retain user waivers even if they delete their accounts, for record keeping purposes as they may wish to continue training, so closing a user account does not result in waiver deletion
-  # has_many :posts, dependent: :nullify # note: uncomment when/if posts are added to the website
-  # has_many :comments, dependent: :nullify # note: uncomment when/if comments are added to the website
-  has_one :syllabus, dependent: :nullify
-  has_one :instructor_qualification, dependent: :nullify
-  has_one :belt_grade, dependent: :nullify
+  # Associations
+
+  has_one :waiver, dependent: :nullify 
+  # We will retain user waivers even if they delete their accounts, for record keeping purposes
+  # as they may wish to continue training, so closing a user account does not result in waiver
+  # deletion; however, in production mode ensure that this is in compliance with data protection
+  # regulations in BC and elsewhere as applicable
+
+  has_many :user_syllabi, dependent: :destroy
+  has_many :syllabi, through: :user_syllabi
+
+  has_many :instructor_qualifications, dependent: :nullify
+  has_one :current_instructor_qualification,
+          -> { order(achieved_at: :desc) },
+          class_name: "InstructorQualification"
+
+  has_many :belt_grades, dependent: :nullify
+  has_one :current_belt_grade,
+          -> { order(obtained_at: :desc) },
+          class_name: "BeltGrade"
+
+  has_many :qualifications, through: :instructor_qualifications
+
   # has_secure_password
 
   attr_accessor :from_omniauth
   before_save :downcase_email
 
-  # Do not need to validate belt_grade_id, qualifications_id as this is configurable only by admins or instructors
+  # Validations
+  # Do not need to validate belt_grade_id, qualifications_id as this is configurable only by admins or
+  # instructors and handled in other models
   # And these can be further constrained to sane input using dropdown menus and no other means of input
-  validates :first_name, :last_name, presence: true, length: { maximum: 50 }, format: { with: /\A[\p{L}\p{M}\p{Pd}ʼ’‘\- ]+\z/, message: "only allows letters and associated accents, diacritics, punctuation, etc"}
-  # validates :email, presence: true, uniqueness:  { case_sensitive: false }, 
-  # format: { with: /\A([\w+\-].?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i }
-  # validates :email, 
-  #           format: { with: URI::MailTo::EMAIL_REGEXP, message: "invalid email format" }, 
-  #           uniqueness: { case_sensitive: false, message: "is already taken by another user" }
-  validates :email, presence: true, 
-            uniqueness: { case_sensitive: false, message: "is already taken" }, 
-            format: { with: /\A([\w+\-].?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i, message: "invalid email format" }
+  validates :first_name,
+            presence: true,
+            length: {
+              maximum: 50
+            },
+            format: {
+              with: /\A[\p{L}\p{M}\p{Pd}ʼ’‘'\- ]+\z/,
+              message:
+                "only allows letters and associated accents, diacritics, punctuation, etc"
+            },
+            unless: :from_omniauth
+
+  validates :last_name,
+            presence: true,
+            length: {
+              maximum: 50
+            },
+            format: {
+              with: /\A[\p{L}\p{M}\p{Pd}ʼ’‘'\- ]+\z/,
+              message:
+                "only allows letters and associated accents, diacritics, punctuation, etc"
+            },
+            unless: :from_omniauth
+
+  validates :email,
+            presence: true,
+            uniqueness: {
+              case_sensitive: false,
+              message: "is already taken"
+            },
+            format: {
+              with: /\A([\w+\-].?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i,
+              message: "invalid email format"
+            }
 
   # Compare the three above validations, second is worst, third may be best
   # There may be some edge cases with symbols like plus signs, how would we handle these?
 
-  validates :password, presence: true, length: { minimum: 8 }, confirmation: true, unless: :from_omniauth?
-  validates :password_confirmation, presence: true, unless: :from_omniauth?
+  validates :password,
+            presence: true,
+            length: {
+              minimum: 8
+            },
+            confirmation: true,
+            unless: -> { from_omniauth? || !password_is_being_changed? }
+  validates :password_confirmation,
+            presence: true,
+            unless: -> { from_omniauth? || !password_is_being_changed? }
   # TODO: Add special characters check, here and in the client
+
+  validate :first_aid_achievement_date_required
 
   def full_name
     "#{first_name.titleize} #{last_name.titleize}".strip
     # Titleize helps with edge cases with mixed capitalization like FitzGerald
   end
 
-  def self.from_omniauth(auth_hash)
-    require 'googleauth/id_tokens'
-    begin
-
-      id_token = auth_hash&.dig('extra', 'id_token')
-
-      if id_token.blank?
-        Rails.logger.error "Google ID token is missing in the OmniAuth hash."
-        return nil
-      end
-
-      client_id = Rails.application.credentials.dig(:API, :google_client_id)
-
-      if client_id.blank?
-        Rails.logger.error "GOOGLE_CLIENT_ID environment variable not set."
-        return nil
-      end
-
-      # jwks_url = 'https://www.googleapis.com/oauth2/v1/certs' # Or try 'https://www.googleapis.com/oauth2/v3/certs'
-      # jwks = Google::Auth::IDTokens::Verifier.new(jwks_url).fetch_jwks
-      # # verifier = Google::Auth::IDTokens::Verifier.
-      # verifier = Google::Auth::IDTokens::Verifier.new(iss: 'https://accounts.google.com')
-      # # validator = Google::Auth::IDTokens::Verifier.new(aud: client_id)
-      # # payload = validator.verify(id_token)
-      # payload = verifier.verify(id_token, jwks, audience: [client_id])
-
-      # key_source = Google::Auth::IDTokens::JwkHttpKeySource.new(Google::Auth::IDTokens::OAUTH2_V3_CERTS_URL)
-      # verifier = Google::Auth::IDTokens::Verifier.new(key_source: key_source)
-      # # Assuming 'token' is the Google ID token received
-      # payload = verifier.verify(token)
-
-      payload = Google::Auth::IDTokens.verify_oidc(id_token, aud: client_id)
-
-      if payload
-        provider = auth_hash[:provider]
-        uid = payload['sub'] # Use sub from the verified payload
-        info = auth_hash[:info] # Keep using info from auth_hash for consistency with Devise
-        credentials = auth_hash[:credentials]
-
-        # Ensure email is present in the payload (it should be)
-        email = payload['email']
-        if email.blank?
-          Rails.logger.error "Email is missing from the verified Google ID token payload."
-          return nil
-        end
-
-        user = User.find_or_initialize_by(provider: provider, uid: uid)
-
-        if user.new_record?
-          user.email = email
-          user.first_name = payload['given_name'] || auth.info.first_name.presence || auth.info.name&.split&.first.presence || "First Name"
-          user.last_name = payload['family_name'] || auth.info.last_name.presence || auth.info.name&.split&.last.presence || "Last Name"
-          user.skip_password_validation = true
-          user.password = Devise.friendly_token[0, 20]
-          user.password_confirmation = user.password
-        end
-
-        # Store tokens
-        if credentials
-          user.google_token = credentials[:token]
-          user.google_refresh_token ||= credentials[:refresh_token] # Prevent overwriting valid token
-          user.google_expires_at = Time.at(credentials[:expires_at]) if credentials[:expires_at]
-        end
-        if user.save
-          Rails.logger.info("User successfully saved via OAuth (verified ID token): #{user.email}")
-        else
-          Rails.logger.error("OAuth user save failed after ID token verification: #{user.errors.full_messages}")
-        end
-
-        user # Return user
-      else
-        Rails.logger.error "Google ID token verification failed."
-        return nil
-      end
-
-rescue Google::Auth::IDTokens::VerificationError => e
-  Rails.logger.error "Google ID token verification failed: #{e.message}"
-  return nil
-rescue Google::Auth::IDTokens::SignatureError => e
-  Rails.logger.error "Google ID token signature error: #{e.message}"
-  return nil
-rescue StandardError => e
-  Rails.logger.error "Error verifying Google ID token: #{e.message}"
-  Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
-  return nil # Or handle the error as appropriate
-rescue Google::Auth::IDTokens::AudienceMismatchError => e
-  Rails.logger.error "Google ID token audience mismatch: #{e.message}"
-  return nil
-rescue Google::Auth::IDTokens::IssuerMismatchError => e
-  Rails.logger.error "Google ID token issuer mismatch: #{e.message}"
-  return nil
-rescue Google::Auth::IDTokens::KeySourceError => e
-  Rails.logger.error "Error fetching Google ID token verification keys: #{e.message}"
-  return nil
-end
-  end
-
   def from_omniauth?
-    provider.present? && uid.present? # Or check for the flag we set in from_omniauth
+    !!@from_omniauth # Converts truthy/falsy to true/false
   end
 
   def password_required?
@@ -151,76 +175,148 @@ end
 
   attr_accessor :skip_password_validation
 
-  def self.from_google_token(google_id_token)
+  # Class method to find or create a user from the OmniAuth hash
+  def self.from_omniauth(auth)
     begin
-      client_id = Rails.application.credentials.dig(:API, :google_client_id)
-      validator = Google::Auth::IDTokens::Verifier.new(aud: client_id)
-      payload = validator.verify(google_id_token)
-
-      if payload
-        email = payload['email']
-        given_name = payload['given_name']
-        family_name = payload['family_name']
-        google_uid = payload['sub'] # Google's unique user ID
-
-        # Reuse the find_or_create logic from from_omniauth
-        user = User.find_or_initialize_by(provider: 'google_oauth2', uid: google_uid) do |u|
-          u.email = email
-          u.first_name = given_name
-          u.last_name = family_name
-          u.password = Devise.friendly_token[0, 20] # Set a default password for the user in the case of Google signup
-        end
-
-        user.save
-        user
-      else
-        Rails.logger.error "Invalid Google ID token"
-        nil
+      id_token = auth.dig(:extra, :id_token)
+      unless id_token.present?
+        raise StandardError.new(
+                "Google ID token is missing in the OmniAuth hash."
+              )
       end
-    rescue Google::Auth::IDTokens::SignatureError => e
-      Rails.logger.error "Google ID token signature error: #{e.message}"
-      nil
-    rescue StandardError => e
-      Rails.logger.error "Error verifying Google ID token: #{e.message}"
-      nil
+
+      client_id = Rails.application.credentials.dig(:API, :google_client_id)
+      unless client_id.present?
+        raise StandardError.new(
+                "Google client ID not configured in Rails credentials."
+              )
+      end
+
+      # Verify the ID token payload
+      payload = Google::Auth::IDTokens.verify_oidc(id_token, aud: client_id)
+    rescue => e
+      Rails.logger.error("Google ID token verification failed: #{e.message}")
+      return nil
+    end
+
+    email = payload["email"].downcase
+    provider = auth[:provider]
+    uid = auth[:uid]
+
+    # 1. Try to find user by provider/uid (Returning OAuth user)
+    user = find_by(provider: provider, uid: uid)
+
+    # 2. If not found, try to find the user by email (For linking existing accounts)
+    unless user
+      user = find_by(email: email)
+
+      if user
+        # Existing email/password user found. Link the OAuth account.
+        user.provider = provider
+        user.uid = uid
+        Rails.logger.info(
+          "Existing user (ID: #{user.id}) linked to Google account."
+        )
+      end
+    end
+
+    # 3. If still not found, initialize a new user object
+    user = new(provider: provider, uid: uid, email: email) unless user
+
+    # Set/Update attributes from payload/auth hash (common to new and linked users)
+    user.first_name = payload["given_name"] || auth.dig(:info, :first_name)
+    user.last_name = payload["family_name"] || auth.dig(:info, :last_name)
+    user.email = email # Always set the email from the verified payload (downcased)
+
+    # Set credentials
+    user.google_token = auth.dig(:credentials, :token)
+    user.google_refresh_token = auth.dig(:credentials, :refresh_token)
+    # Safely handle expiration time
+    if auth.dig(:credentials, :expires_at).present?
+      user.google_expires_at =
+        Time.at(auth.dig(:credentials, :expires_at)).to_datetime
+    end
+
+    # Handle Devise requirements (skip password validation for OAuth)
+    user.skip_password_validation = true
+    # Only set a new password if it's a completely new record with no password set
+    if user.new_record? || user.encrypted_password.blank?
+      user.password = Devise.friendly_token[0, 20]
+      user.password_confirmation = user.password
+    end
+
+    if user.save
+      user
+    else
+      Rails.logger.error(
+        "OAuth user save failed after ID token verification: #{user.errors.full_messages.join(", ")}"
+      )
+      user
     end
   end
 
-  # def self.from_omniauth_old(auth)
+  def is_admin?
+    is_admin
+  end
 
-  #   # TODO check this in the tester file
-  #   begin
-  #     # Check for missing info (important!)
-  #     if auth.info.nil? || auth.info.email.nil?
-  #       Rails.logger.error("Google Auth Error: Missing email information from auth data: #{auth.inspect}")
-  #       return nil # Authentication failed
-  #     end
+  def self.from_google_token(id_token)
+    # Class method to find or create a user from a Google ID token (for API authentication)
+    begin
+      verifier =
+        Google::Auth::IDTokens::Verifier.new(
+          aud: Rails.application.credentials.dig(:API, :google_client_id)
+        )
+      payload = verifier.verify(id_token)
 
-  #     # Set first_name and last_name, with a fallback if necessary
-  #     user = where(email: auth.info.email.downcase).first_or_initialize do |user|
-  #       user.first_name = auth.info.first_name.presence || auth.info.name&.split&.first.presence || "First Name"
-  #       user.last_name = auth.info.last_name.presence || auth.info.name&.split&.last.presence || "Last Name"
-  #       user.email = auth.info.email.downcase
-  #     end
-  
-  #     # Persist the user (important!)
-  #     if user.new_record? && user.save # Only save if it's a new user
-  #       Rails.logger.info("New user created via Google Auth: #{user.inspect}")
-  #     elsif user.changed? && user.save
-  #       Rails.logger.info("Existing user updated via Google Auth: #{user.inspect}")
-  #     end
-  
-  #     user # Return the user object
-  
-  #   rescue => e # Rescue any exception
-  #     Rails.logger.error("Google Auth Error: #{e.message}\n#{e.backtrace.join("\n")}")
-  #     nil # Authentication failed
-  #   end
-  # end
+      raise StandardError.new("Invalid Google ID token") unless payload.present?
+    rescue Google::Auth::IDTokens::VerificationError,
+           Google::Auth::IDTokens::SignatureError => e
+      Rails.logger.error("Google ID token signature error: #{e.message}")
+      return nil
+    rescue => e
+      Rails.logger.error("Error verifying Google ID token: #{e.message}")
+      return nil
+    end
+
+    user = find_or_initialize_by(provider: "google_oauth2", uid: payload["sub"])
+
+    user.email = payload["email"]
+    user.first_name = payload["given_name"]
+    user.last_name = payload["family_name"]
+    user.skip_password_validation = true
+    user.password = Devise.friendly_token[0, 20] if user.new_record?
+    user.password_confirmation = user.password if user.new_record?
+
+    if user.save
+      user
+    else
+      Rails.logger.error(
+        "Google token user save failed: #{user.errors.full_messages.join(", ")}"
+      )
+      user
+    end
+  end
+
+  def first_aid_achievement_date_required
+    # 1. Only proceed with the check if the user has marked 'has_first_aid_qualification' as true.
+    if self.has_first_aid_qualification?
+      # 2. If the qualification flag is true, but the date field is empty, add an error.
+      if self.first_aid_achievement_date.blank?
+        errors.add(
+          :first_aid_achievement_date,
+          "must be recorded if the user holds a First Aid and CPR qualification."
+        )
+      end
+    end
+  end
 
   private
 
   def downcase_email
     self.email = email.downcase if email.present?
+  end
+
+  def password_is_being_changed?
+    password.present? || password_confirmation.present?
   end
 end

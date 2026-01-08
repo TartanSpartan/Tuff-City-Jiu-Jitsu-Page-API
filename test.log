@@ -1,0 +1,89 @@
+DEBUG: DATABASE_HOST value is 100.116.182.73
+
+Video
+  associations
+    belongs to a technique
+  validations
+    with valid attributes
+      is valid with valid attributes
+    with invalid attributes
+      is not valid without a url
+
+[DEBUG]: --- Starting duplicate URL test ---
+[DEBUG]: Creating a unique technique without a video to prevent validation conflicts.
+      is not valid with a duplicate url (FAILED - 1)
+      is not valid without a country
+      is not valid without a year
+      is not valid with a year less than or equal to 1900
+      is not valid with a non-integer year
+      is not valid with a year in the future
+      is not valid without a technique
+
+Failures:
+
+  1) Video validations with invalid attributes is not valid with a duplicate url
+     Failure/Error: unique_technique = create(:technique, videos: [])
+
+     ActiveRecord::RecordInvalid:
+       Validation failed: Country has already been taken
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluation.rb:15:in 'FactoryBot::Evaluation#create'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:12:in 'block in FactoryBot::Strategy::Create#result'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:9:in 'FactoryBot::Strategy::Create#result'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory.rb:46:in 'FactoryBot::Factory#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:29:in 'block in FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:28:in 'FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:5:in 'FactoryBot::Strategy::Create#association'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:33:in 'FactoryBot::Evaluator#association'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute/association.rb:19:in 'block in FactoryBot::Attribute::Association#to_proc'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:75:in 'BasicObject#instance_exec'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:75:in 'block in define_attribute'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:59:in 'FactoryBot::AttributeAssigner#get'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:16:in 'block (2 levels) in FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:15:in 'Array#each'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:15:in 'block in FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:14:in 'FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluation.rb:10:in 'FactoryBot::Evaluation#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:9:in 'FactoryBot::Strategy::Create#result'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory.rb:46:in 'FactoryBot::Factory#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:29:in 'block in FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:28:in 'FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:5:in 'FactoryBot::Strategy::Create#association'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:33:in 'FactoryBot::Evaluator#association'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute/association.rb:19:in 'block in FactoryBot::Attribute::Association#to_proc'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:75:in 'BasicObject#instance_exec'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:75:in 'block in define_attribute'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:59:in 'FactoryBot::AttributeAssigner#get'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:16:in 'block (2 levels) in FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:15:in 'Array#each'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:15:in 'block in FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:14:in 'FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluation.rb:10:in 'FactoryBot::Evaluation#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:9:in 'FactoryBot::Strategy::Create#result'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory.rb:46:in 'FactoryBot::Factory#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:29:in 'block in FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:28:in 'FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:5:in 'FactoryBot::Strategy::Create#association'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:33:in 'FactoryBot::Evaluator#association'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute/association.rb:19:in 'block in FactoryBot::Attribute::Association#to_proc'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:75:in 'BasicObject#instance_exec'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluator.rb:75:in 'block in define_attribute'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:59:in 'FactoryBot::AttributeAssigner#get'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:16:in 'block (2 levels) in FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:15:in 'Array#each'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:15:in 'block in FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/attribute_assigner.rb:14:in 'FactoryBot::AttributeAssigner#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/evaluation.rb:10:in 'FactoryBot::Evaluation#object'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy/create.rb:9:in 'FactoryBot::Strategy::Create#result'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory.rb:46:in 'FactoryBot::Factory#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:29:in 'block in FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/factory_runner.rb:28:in 'FactoryBot::FactoryRunner#run'
+     # /home/phablet/.rvm/gems/ruby-3.4.2/gems/factory_bot-6.5.1/lib/factory_bot/strategy_syntax_method_registrar.rb:28:in 'block in FactoryBot::Syntax::Methods#define_singular_strategy_method'
+     # ./spec/models/video_spec.rb:44:in 'block (4 levels) in <main>'
+
+Finished in 2.18 seconds (files took 4.95 seconds to load)
+10 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/models/video_spec.rb:37 # Video validations with invalid attributes is not valid with a duplicate url
+

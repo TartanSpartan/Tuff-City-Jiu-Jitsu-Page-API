@@ -1,16 +1,22 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
-require 'devise'
-ENV['RAILS_ENV'] ||= 'test'
-require_relative '../config/environment'
+require "devise"
+ENV["RAILS_ENV"] ||= "test"
+require_relative "../config/environment"
 # Prevent database truncation if the environment is production
-abort("The Rails environment is running in production mode!") if Rails.env.production?
-require 'rspec/rails'
-require 'factory_bot_rails'
-require 'googleauth'
-require 'googleauth/id_tokens'
+if Rails.env.production?
+  abort("The Rails environment is running in production mode!")
+end
+require "rspec/rails"
+require "factory_bot_rails"
+require "googleauth"
+require "googleauth/id_tokens"
+require "test_prof/recipes/rspec/let_it_be"
+require Rails.root.join("app/models/belt.rb")
 
 # Prevent database truncation if the environment is production
-abort("The Rails environment is running in production mode!") if Rails.env.production?
+if Rails.env.production?
+  abort("The Rails environment is running in production mode!")
+end
 # Uncomment the line below in case you have `--require rails_helper` in the `.rspec` file
 # that will avoid rails generators crashing because migrations haven't been run yet
 # return unless Rails.env.test?
@@ -29,6 +35,8 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 
 # Try to make all routes accessible for each RSpec test. Note: have been having trouble doing that inside the test files, so will see if doing it solely within rails_helper.rb is sufficient.
 Rails.application.reload_routes!
+
+Dir[Rails.root.join("spec/support/**/*.rb")].each { |f| require f }
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
@@ -53,9 +61,7 @@ rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
 
-
 RSpec.configure do |config|
-
   # Enable session middleware
   # config.include Rack::Test::Methods, type: :request
   # if Rails.env.test?
@@ -68,14 +74,12 @@ RSpec.configure do |config|
   # end
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
-  config.fixture_paths = [
-    Rails.root.join('spec/fixtures')
-  ]
+  config.fixture_paths = [ Rails.root.join("spec/fixtures") ]
 
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, remove the following line or assign false
   # instead of true.
-  config.use_transactional_fixtures = true
+  # config.use_transactional_fixtures = true
 
   # You can uncomment this line to turn off ActiveRecord support entirely.
   # config.use_active_record = false
@@ -110,6 +114,8 @@ RSpec.configure do |config|
   config.include Devise::Test::ControllerHelpers, type: :controller
   config.include Warden::Test::Helpers
 
+  config.before(:context, type: :request) { Rails.application.reload_routes! }
+
   config.include Rails.application.routes.url_helpers, type: :request
 
   # Configuration for DatabaseCleaner
@@ -117,22 +123,31 @@ RSpec.configure do |config|
   RSpec.configure do |config|
     config.before(:suite) do
       DatabaseCleaner.clean_with(:truncation)
+      Rails.application.eager_load!
     end
-  
-    config.before(:each) do
-      DatabaseCleaner.strategy = :transaction
-    end
-  
-    config.before(:each, js: true) do
-      DatabaseCleaner.strategy = :truncation
-    end
-  
-    config.before(:each) do
-      DatabaseCleaner.start
-    end
-  
-    config.after(:each) do
-      DatabaseCleaner.clean
+
+    config.before(:each) { DatabaseCleaner.strategy = :transaction }
+
+    config.before(:each, js: true) { DatabaseCleaner.strategy = :truncation }
+
+    config.before(:each) { DatabaseCleaner.start }
+
+    config.after(:each) { DatabaseCleaner.clean }
+  end
+
+  Shoulda::Matchers.configure do |config|
+    config.integrate do |with|
+      # Choose a test framework:
+      with.test_framework :rspec
+
+      # And multiple libraries:
+      with.library :rails
+      with.library :active_model
+      with.library :active_record
     end
   end
+
+  # This line ensures Active Model Serializers test helpers are available.
+  # It automatically configures the adapter and other settings for tests.
+  config.include ActiveModelSerializers::Test::Schema, type: :serializer
 end

@@ -18,21 +18,21 @@ There are [previous versions of the website](https://github.com/TartanSpartan/Tu
 
 # Key folders and files
 
-* Dependencies are defined in the [Gemfile](Gemfile) and [Gemfile.lock](Gemfile.lock) files
+- Dependencies are defined in the [Gemfile](Gemfile) and [Gemfile.lock](Gemfile.lock) files
 
-* Standard API-only controllers (mostly under the api/v1/ namespace), models, serializers etc
+- Standard API-only controllers (mostly under the api/v1/ namespace), models, serializers etc
 
-* Each of the aformentioned components is covered for testing by Rspec, with factories to generate sample data where appropriate, in the spec/ directory
+- Each of the aformentioned components is covered for testing by Rspec, with factories to generate sample data where appropriate, in the spec/ directory
 
-* A gradually expanding set of database migrations to define new tables and relations, and the seed file to instantiate the database, are all listed in the db/ directory
+- A gradually expanding set of database migrations to define new tables and relations, and the seed file to instantiate the database, are all listed in the db/ directory
 
-* The [config/routes.rb](config/routes.rb) file defines the various routes, with the aid of the Devise framework at points
+- The [config/routes.rb](config/routes.rb) file defines the various routes, with the aid of the Devise framework at points
 
-* [config/database.yml](config/database.yml) sets up the link to the Postgres database, with test, development and production versions set up using a combination of environment variables and encrypted files
+- [config/database.yml](config/database.yml) sets up the link to the Postgres database, with test, development and production versions set up using a combination of environment variables and encrypted files
 
-* Please ensure that the Rails server is running and accessible on your network configuration alongside the React one
+- Please ensure that the Rails server is running and accessible on your network configuration alongside the React one
 
-* Refer to the [React Client](https://github.com/TartanSpartan/Tuff-City-Jiu-Jitsu-Page-Client) ReadMe for more information
+- Refer to the [React Client](https://github.com/TartanSpartan/Tuff-City-Jiu-Jitsu-Page-Client) ReadMe for more information
 
 # Further information
 
@@ -43,3 +43,20 @@ For more information, please see the internal links below:
 - There are some novel features, such as:
 - [API Oauth implementation for Google](app/controllers/api/v1/users/omniauth_callbacks_controller.rb) [and traditional form-based sign-in](app/controllers/api/v1/users_controller.rb) [and sign-up](app/controllers/api/v1/sessions_controller.rb)
 - [Enforcement of CSRF protection which is particularly important for a fullstack implementation spread across several development machines](app/controllers/api/v1/csrf_tokens_controller.rb)
+
+## Database constraints and partial indexes
+
+This project enforces some uniqueness constraints at the database level where
+concurrency or non-Rails writes might otherwise create race conditions. A
+notable example is `technique_types`:
+
+- The combination `(syllabus_id, belt_id, category, sub_category)` must be
+  unique when `sub_category` is present. Because `sub_category` may be NULL
+  (admins may leave it blank while they classify techniques), we use a
+  partial unique index in Postgres to enforce uniqueness only for non-null
+  values.
+
+Migration: `db/migrate/20251227000000_add_partial_unique_index_to_technique_types.rb`
+
+If you change DB engines or alter the uniqueness semantics, update the
+migration and the `TechniqueType` model validations accordingly.

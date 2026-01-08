@@ -39,25 +39,24 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
       end
 
       it "redirects to the frontend URL and the user is signed in" do
-
         get "/api/v1/auth/google_oauth2/callback",
         headers: { 'Accept': 'application/json' },
         env: { 'omniauth.auth' => OmniAuth.config.mock_auth[:google_oauth2] }
-    
+
         # Set the Devise mapping on the standard request environment
         request.env["devise.mapping"] = Devise.mappings[:api_v1_user]
- 
+
         expect(response).to have_http_status(:redirect) # Or :found (302)
         expect(response).to redirect_to(Rails.application.credentials.dig(:Client, :frontend_url))
 
         # Manually set the user in the Warden session for the assertion
-        request.session["warden.user.api_v1_user.key"] = [user.id, "$2a$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"] # Example session key
+        request.session["warden.user.api_v1_user.key"] = [ user.id, "$2a$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxx" ] # Example session key
 
         # Assert that the user is signed in (check the session using Devise's helper)
         expect(@request.env['warden'].authenticated?(:api_v1_user)).to be_truthy # Also update the scope here
         expect(@request.env['warden'].user(:api_v1_user)).to eq(user)
         expect(current_api_v1_user).to eq(user)
-        
+
         expect(@request.session["warden.user.api_v1_user.key"]).to be_present
         expect(@request.session["warden.user.api_v1_user.key"][0]).to eq(user.id)
       end
@@ -65,7 +64,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
 
     context 'successful authentication (integration test)' do
       let(:google_id_token) { "test_mock_google_id_token" }
-      
+
       before do
         Rails.application.credentials.config[:API] = { google_client_id: 'test_google_client_id' } # Ensure the credential is set
 
@@ -82,16 +81,15 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
       end
 
       it "redirects to the frontend URL and signs in the user" do
-
         get "/api/v1/auth/google_oauth2/callback",
             env: { 'omniauth.auth' => OmniAuth.config.mock_auth[:google_oauth2] } # Pass omniauth.auth in env
 
         user = User.find_by(email: 'example@example.com')
         expect(user).to be_present
-        expect(response).to have_http_status(:redirect) 
+        expect(response).to have_http_status(:redirect)
         expect(response).to redirect_to(Rails.application.credentials.dig(:Client, :frontend_url))
         expect(request.env['warden'].authenticated?(:api_v1_user)).to be_truthy
-        expect(request.env['warden'].user(:api_v1_user)).to eq(user) 
+        expect(request.env['warden'].user(:api_v1_user)).to eq(user)
       end
     end
 
@@ -110,7 +108,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity) # Expect 422
         expect(response.content_type).to eq('application/json; charset=utf-8')
-      
+
         json_response = JSON.parse(response.body)
         expect(json_response['errors']).to be_present # Expect an 'errors' key in the JSON
         expect(json_response['errors']).to include("Email is invalid") # Check for the specific error message
@@ -141,7 +139,6 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
     end
 
     before do
-
       # Set the mock authentication hash
       OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new({
         provider: 'google_oauth2',
@@ -174,7 +171,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
 
     it "returns an OK status and user information in JSON - GOOGLE ID TOKEN FLOW" do
       Rails.application.credentials.config[:API] = { google_client_id: 'test_google_client_id' } # Ensure credential is set
-    
+
       # Mock the Google ID token verification to return a successful payload
       payload = {
         'sub' => '12345',
@@ -183,7 +180,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
         'family_name' => 'User'
       }
       allow(Google::Auth::IDTokens).to receive(:verify_oidc).with(google_id_token, aud: Rails.application.credentials.dig(:API, :google_client_id)).and_return(payload)
-    
+
       get "/api/v1/auth/google_oauth2", env: { 'omniauth.strategy' => 'google_oauth2' }
 
       # Simulate the callback
@@ -218,7 +215,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
       expect(response).to have_http_status(:redirect)
       expect(response).to be_redirect
       expect(response).to redirect_to(Rails.application.credentials.dig(:Client, :frontend_url))
-    
+
       user = User.find_by(email: 'example@example.com')
       expect(user).to be_present
       expect(user.first_name).to eq('Doyle')
@@ -231,7 +228,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
     describe "GET /api/v1/auth/google_oauth2/callback", type: :request do
       context "failed authentication with google_id_token" do
         let(:google_id_token) { 'invalid_google_id_token' }
-        
+
         before do
           allow(User).to receive(:from_omniauth).with(any_args) do |auth|
             if auth.dig('extra', 'id_token') == 'invalid_google_id_token'
@@ -242,7 +239,7 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
               allow(User).to receive(:from_omniauth).with(OmniAuth.config.mock_auth[:google_oauth2]).and_return(mock_user)
             end
           end
-        
+
           OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new({
             provider: 'google_oauth2',
             uid: 'some_uid',
@@ -273,10 +270,9 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
         end
 
         it "returns an unauthorized error" do
-        
           # Simulate the callback with the google_id_token as a parameter
           get "/api/v1/auth/google_oauth2/callback", env: { 'omniauth.auth' => OmniAuth.config.mock_auth[:google_oauth2] }
-        
+
           expect(response).to have_http_status(:unauthorized)
           expect(response.content_type).to eq('application/json; charset=utf-8')
           json_response = JSON.parse(response.body)
@@ -306,9 +302,8 @@ RSpec.describe "Api::V1::Users::OmniauthCallbacksController", type: :request do
         OmniAuth.config.test_mode = false
         OmniAuth.config.mock_auth[:google_oauth2] = nil
       end
-      
-      it "returns an unauthorized error" do
 
+      it "returns an unauthorized error" do
         get "/api/v1/auth/google_oauth2/callback", env: { 'omniauth.auth' => OmniAuth.config.mock_auth[:google_oauth2] }
 
         expect(response).to have_http_status(:unauthorized)
@@ -332,7 +327,7 @@ end
     context "failure" do
       it "returns an unauthorized error with a message" do
         get "/api/v1/auth/google_oauth2/callback", params: { error: 'access_denied', error_description: 'User declined to authorize the app' }
-        expect(response).to have_http_status(:redirect) 
+        expect(response).to have_http_status(:redirect)
         expect(response).to redirect_to(new_api_v1_user_session_path(format: :json, error: 'omniauth_failure', reason: 'User declined to authorize the app'))
         follow_redirect! # Make a request to the redirected URL
         expect(response).to have_http_status(:unauthorized)
@@ -345,12 +340,12 @@ end
       it "handles a generic error" do
         get "/api/v1/auth/google_oauth2/callback", params: { error: 'invalid_request' }
         expect(response).to have_http_status(:redirect)
-        expect(response).to redirect_to(new_api_v1_user_session_path(format: :json, error: 'omniauth_failure', reason: 'invalid_request'))      
+        expect(response).to redirect_to(new_api_v1_user_session_path(format: :json, error: 'omniauth_failure', reason: 'invalid_request'))
       end
     end
   end
 
-  describe "GET #passthru", type: :request do 
+  describe "GET #passthru", type: :request do
     include Rails.application.routes.url_helpers
 
     after do
@@ -387,7 +382,7 @@ end
           email: email,
           name: "#{first_name} #{last_name}",
           given_name: first_name,
-          family_name: last_name,
+          family_name: last_name
         },
         id_token: id_token # Use the provided or default id_token
       }
@@ -419,8 +414,8 @@ end
     if session_cookie
       cookie_value = session_cookie.split('=', 2).last
       # Cookie values can vary; for CookieStore, it's usually Base64 encoded and might be signed/encrypted
-      return { '_tuff_city_jiu_jitsu_api_tablet_session' => cookie_value }
+      { '_tuff_city_jiu_jitsu_api_tablet_session' => cookie_value }
     else
-      return {}
-   end
+      {}
+    end
 end

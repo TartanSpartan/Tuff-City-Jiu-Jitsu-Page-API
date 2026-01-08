@@ -90,9 +90,16 @@ node_modules/
 
 # Ignore backup files
 *.backup
+*.backup2
+*.workingbackup
 *.orig
+*.old
 *~
 \#*# # Editor swap files
 
 # Ignore replace_rule file for rewriting Git commits retroactively
 replace_rule.txt
+
+# Ignore script to switch over the PSQL database to the tablet or laptop, with sensitive IP info
+run_db_on_tablet.sh
+run_db_on_laptop.sh
