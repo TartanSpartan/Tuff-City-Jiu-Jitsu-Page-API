@@ -56,6 +56,35 @@ bower.json
 /tmp/*
 !/log/.keep
 !/tmp/.keep
+warm_all.log
+
+# Ignore header files and other miscellaneous checks
+verify_headers.txt
+verify.json
+trimmed.json
+trimmed_headers.txt
+syllabus.json
+syllabus_headers.txt
+sign_in_body.txt
+sign_in_headers.txt
+new_syllabus.json
+new_syllabus2.json
+new_syllabus3.json
+new_syllabus_headers.txt
+new_syllabus_headers2.txt
+new_syllabus_headers3.txt
+scripts/
+included_check.json
+included_check_headers.txt
+error.log
+cookies.txt
+create_user_body.txt
+create_user_headers.txt
+csrf.json
+csrf_headers.txt
+NewProfiler.log
+Profiler.log
+
 
 # Ignore pidfiles, but keep the directory.
 /tmp/pids/*
@@ -90,6 +119,7 @@ node_modules/
 
 # Ignore backup files
 *.backup
+/backups/*
 *.backup2
 *.workingbackup
 *.orig
@@ -103,3 +133,4 @@ replace_rule.txt
 # Ignore script to switch over the PSQL database to the tablet or laptop, with sensitive IP info
 run_db_on_tablet.sh
 run_db_on_laptop.sh
+

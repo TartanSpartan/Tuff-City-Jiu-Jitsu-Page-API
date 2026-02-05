@@ -53,6 +53,16 @@ class Syllabus < ApplicationRecord
 
   public
 
+  after_commit :enqueue_warm_cache
+
+  def enqueue_warm_cache
+    if Rails.env.development?
+      WarmSyllabusCacheJob.perform_now(self.id)
+    else
+      WarmSyllabusCacheJob.perform_later(self.id)
+    end
+  end
+
   # Return an ActiveRecord::Relation of belts visible to the given user for this syllabus.
   # - If `user` is nil, we fall back to showing the public starting belt (Yellow / kyu 7).
   # - The rule: show belts from (user_kyu - 1) up to FIRST_VIEWABLE_BELT_KYU (inclusive).
@@ -74,9 +84,16 @@ class Syllabus < ApplicationRecord
     kyu_range_to_show = (final_kyu_to_show..FIRST_VIEWABLE_BELT_KYU).to_a
 
     # Use `reorder` to override any Belt.default_scope ordering (which is kyu_number desc).
+    # Limit eager-loading to only what the index view needs: technique types and
+    # the techniques themselves (as lightweight link objects). We intentionally
+    # avoid loading `videos`, `differences`, `comparisons` and `belt_grades` here
+    # because those inflate the payload and are not required for the syllabus
+    # list view.
     belts
       .where(kyu_number: kyu_range_to_show)
-      .includes(:techniques, :technique_types)
+      .includes(
+        technique_types: :techniques
+      )
       .reorder(kyu_number: :asc)
   end
 

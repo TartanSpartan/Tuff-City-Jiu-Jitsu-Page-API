@@ -22,9 +22,20 @@ class BeltSerializer < ActiveModel::Serializer
   # Includes all TechniqueTypes associated with this Belt.
   has_many :technique_types
 
-  # Includes all Techniques associated with this Belt.
-  has_many :techniques
+  # Use a lightweight technique-type serializer for lists to avoid pulling
+  # videos, differences and comparisons into index-like responses.
+  has_many :technique_types, serializer: TechniqueTypeLimitedSerializer
 
-  # Includes all BeltGrades associated with this Belt.
-  has_many :belt_grades
+  def serializable_hash(*args, &block)
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    result = super
+    dur = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000.0
+    Rails.logger.info("[AMS-LOCAL-PROFILER] #{self.class.name} serializable_hash: #{'%.2f' % dur}ms")
+    result
+  end
+
+  # Do not include `techniques` or `belt_grades` here by default — those
+  # inflate the payload and cause heavy serialization work. Technique lists
+  # are provided via the `TechniqueTypeLimitedSerializer` above as simple
+  # link objects.
 end

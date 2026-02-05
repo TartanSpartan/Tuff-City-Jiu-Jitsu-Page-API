@@ -24,17 +24,21 @@ class Api::V1::TechniquesController < Api::ApplicationController
     if params[:syllabus_id].present?
       @techniques =
         Technique
-          .includes(:videos, :differences, :technique_type, :belt)
+          .includes(:technique_type, :belt)
           .joins(:technique_type)
           .where(technique_types: { syllabus_id: params[:syllabus_id] })
           .order(belt_id: :desc)
     else
       @techniques =
-        Technique.includes(:videos, :differences, :technique_type, :belt).order(
+        Technique.includes(:technique_type, :belt).order(
           belt_id: :desc
         )
     end
-    render json: @techniques, each_serializer: TechniqueSerializer
+
+    # Use a lightweight serializer for index/list endpoints to avoid loading
+    # large associations like `videos`, `differences` or `comparisons` which
+    # are unnecessary for simple lists and can trigger N+1 warnings.
+    render json: @techniques, each_serializer: TechniqueLimitedSerializer
   end
 
   def create

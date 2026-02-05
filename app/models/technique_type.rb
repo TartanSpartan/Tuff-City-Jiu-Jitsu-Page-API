@@ -67,6 +67,17 @@ class TechniqueType < ApplicationRecord
   # value participates in validations (and uniqueness checks) consistently.
   before_validation :capitalize_category_first_word
 
+  after_commit :enqueue_syllabus_warm
+
+  def enqueue_syllabus_warm
+    return unless syllabus_id
+    if Rails.env.development?
+      WarmSyllabusCacheJob.perform_now(syllabus_id)
+    else
+      WarmSyllabusCacheJob.perform_later(syllabus_id)
+    end
+  end
+
   private
 
   def capitalize_category_first_word
