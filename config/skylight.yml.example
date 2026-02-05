@@ -1,0 +1,12 @@
+# Skylight configuration example
+# Copy to config/skylight.yml or set SKYLIGHT_AUTHENTICATION env var.
+# See https://www.skylight.io/docs for setup and token retrieval.
+
+---
+# authentication: "your-skylight-authentication-token"
+# environment: development
+
+# Optional: configure log level and other options
+# log_level: info
+
+# Recommended: use environment variable in deployment instead of checking token into repo.

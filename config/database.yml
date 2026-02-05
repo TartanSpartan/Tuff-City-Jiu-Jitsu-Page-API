@@ -38,14 +38,22 @@ development:
   # <% puts "DEBUG: DATABASE_HOST value is #{ENV.fetch("DATABASE_HOST", Rails.application.credentials.dig(:database, :host))}" %>
 
 
+# test:
+#   <<: *default
+#   database: <%= ENV.fetch("DATABASE_TEST_NAME", "tuff_city_jitsu_club_test_tablet") %>
+#   username: <%= ENV.fetch("DATABASE_USER_NAME", Rails.application.credentials.dig(:database, :username)) %>
+#   # password: <%= Rails.application.credentials.dig(:database, :password) %>
+#   password: <%= ENV.fetch("DATABASE_PASSWORD", Rails.application.credentials.dig(:database, :password)) %>
+#   host: <%=  ENV.fetch("DATABASE_HOST", Rails.application.credentials.dig(:database, :host)) %> # "localhost"
+#   port: <%= ENV.fetch("DATABASE_PORT", Rails.application.credentials.dig(:database, :port)) %> # 5434
+
 test:
   <<: *default
-  database: <%= ENV.fetch("DATABASE_TEST_NAME", "tuff_city_jitsu_club_test_tablet") %>
-  username: <%= ENV.fetch("DATABASE_USER_NAME", Rails.application.credentials.dig(:database, :username)) %>
-  # password: <%= Rails.application.credentials.dig(:database, :password) %>
-  password: <%= ENV.fetch("DATABASE_PASSWORD", Rails.application.credentials.dig(:database, :password)) %>
-  host: <%=  ENV.fetch("DATABASE_HOST", Rails.application.credentials.dig(:database, :host)) %> # "localhost"
-  port: <%= ENV.fetch("DATABASE_PORT", Rails.application.credentials.dig(:database, :port)) %> # 5434
+  database: tuff_city_jitsu_club_test_tablet
+  username: tuffcity_rails_db_user
+  password: <%= Rails.application.credentials.dig(:database, :password) %>
+  host: localhost
+  port: 5432
 
   # The specified database role being used to connect to postgres.
   # To create additional roles in postgres see `$ createuser --help`.

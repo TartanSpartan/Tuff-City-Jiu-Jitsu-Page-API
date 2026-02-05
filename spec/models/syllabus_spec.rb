@@ -142,4 +142,28 @@ RSpec.describe Syllabus, type: :model do
       ).by(-1)
     end
   end
+
+  describe "cache warming callbacks" do
+    it "enqueues WarmSyllabusCacheJob on create" do
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(kind_of(Integer)).at_least(:once)
+
+      create(:syllabus, country: "AU", year: 2099)
+    end
+
+    it "enqueues WarmSyllabusCacheJob on update" do
+      syllabus = create(:syllabus, country: "JP", year: 2098)
+
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      syllabus.update(year: 2097)
+    end
+
+    it "enqueues WarmSyllabusCacheJob on destroy" do
+      syllabus = create(:syllabus, country: "FR", year: 2096)
+
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      syllabus.destroy
+    end
+  end
 end

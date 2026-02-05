@@ -59,7 +59,10 @@ module Api
     def set_csrf_cookie
       cookies["CSRF-TOKEN"] = {
         value: form_authenticity_token,
-        domain: Rails.application.credentials.dig(:API, :domain)
+        domain: Rails.application.credentials.dig(:API, :domain),
+        secure: request.ssl?,
+        same_site: (request.ssl? ? :none : :lax),
+        httponly: false
       }
     end
 

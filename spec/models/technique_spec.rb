@@ -116,4 +116,39 @@ RSpec.describe Technique, type: :model do
       expect(tech.videos.count).to eq 0
     end
   end
+
+  describe "cache warming callbacks" do
+    let(:syllabus) { create(:syllabus) }
+    let(:belt) { create(:belt, syllabus: syllabus) }
+    let(:technique_type) { create(:technique_type, syllabus: syllabus, belt: belt) }
+
+    it "enqueues WarmSyllabusCacheJob on create" do
+      calls = []
+      allow(WarmSyllabusCacheJob).to receive(:perform_later) { |*args| calls << args }
+
+      create(:technique, technique_type: technique_type, belt: belt)
+
+      expect(calls.any? { |args| args.first == syllabus.id }).to be true
+    end
+
+    it "enqueues WarmSyllabusCacheJob on update" do
+      technique = create(:technique, technique_type: technique_type, belt: belt)
+      calls = []
+      allow(WarmSyllabusCacheJob).to receive(:perform_later) { |*args| calls << args }
+
+      technique.update(summary: "Updated Summary")
+
+      expect(calls.any? { |args| args.first == syllabus.id }).to be true
+    end
+
+    it "enqueues WarmSyllabusCacheJob on destroy" do
+      technique = create(:technique, technique_type: technique_type, belt: belt)
+      calls = []
+      allow(WarmSyllabusCacheJob).to receive(:perform_later) { |*args| calls << args }
+
+      technique.destroy
+
+      expect(calls.any? { |args| args.first == syllabus.id }).to be true
+    end
+  end
 end

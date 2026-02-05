@@ -92,4 +92,31 @@ RSpec.describe TechniqueType, type: :model do
       expect(tt.category).to eq("Bunkai")
     end
   end
+
+  describe "cache warming callbacks" do
+    let(:syllabus) { create(:syllabus) }
+    let(:belt) { create(:belt, syllabus: syllabus) }
+
+    it "enqueues WarmSyllabusCacheJob on create" do
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      create(:technique_type, syllabus: syllabus, belt: belt)
+    end
+
+    it "enqueues WarmSyllabusCacheJob on update" do
+      technique_type = create(:technique_type, syllabus: syllabus, belt: belt)
+
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      technique_type.update(category: "Updated Category")
+    end
+
+    it "enqueues WarmSyllabusCacheJob on destroy" do
+      technique_type = create(:technique_type, syllabus: syllabus, belt: belt)
+
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      technique_type.destroy
+    end
+  end
 end

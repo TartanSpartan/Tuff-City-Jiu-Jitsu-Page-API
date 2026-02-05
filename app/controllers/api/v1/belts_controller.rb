@@ -1,3 +1,5 @@
+require 'digest'
+
 class Api::V1::BeltsController < Api::ApplicationController
   before_action :authenticate_api_v1_user!, except: %i[index show]
   before_action :authorize_admin!, only: %i[create destroy] # Add update here if that gets implemented
@@ -10,14 +12,33 @@ class Api::V1::BeltsController < Api::ApplicationController
     # Ensure nested index correctly filters by syllabus if syllabus_id is present
     if params[:syllabus_id]
       syllabus = Syllabus.find_by!(id: params[:syllabus_id]) # Find the syllabus, raise error if not found
-      belts = syllabus.belts.order(id: :asc) # Get belts associated with this syllabus in ascending order
+      belts = syllabus.belts.includes(:technique_types, :techniques, :belt_grades).order(id: :asc) # Eager-load associations
     else
-      belts = Belt.all.order(id: :asc) # Get all belts if not nested
+      belts = Belt.includes(:technique_types, :techniques, :belt_grades).order(id: :asc) # Eager-load associations
     end
 
     # TODO: Check if the order still works with the addition of kyu_number, or if it needs to be tweaked for it
 
-    render(json: belts, each_serializer: BeltSerializer)
+    # Build cache key and last-mod timestamps for HTTP caching
+    last_belt_ts = belts.maximum(:updated_at)&.to_i
+    cache_key = [
+      'belts',
+      (params[:syllabus_id] || 'all'),
+      belts.maximum(:updated_at)&.to_i
+    ].join('/')
+
+    payload = Rails.cache.fetch(cache_key, expires_in: 6.hours) do
+      BeltJsonapiSerializer.new(
+        belts,
+        include: [:technique_types, :'technique_types.techniques']
+      ).serializable_hash
+    end
+
+    etag = Digest::MD5.hexdigest(cache_key)
+    last_modified = Time.at(last_belt_ts || 0)
+    return head(:not_modified) unless stale?(etag: etag, last_modified: last_modified)
+
+    render json: payload
   end
 
   def create
@@ -32,7 +53,13 @@ class Api::V1::BeltsController < Api::ApplicationController
 
     begin
       belt.save!
-      render json: belt, status: :created
+      payload = BeltJsonapiSerializer.new(belt, include: [:technique_types, :'technique_types.techniques']).serializable_hash
+
+      # Write the single-belt cache so subsequent GETs are cached
+      show_key = ['belt', belt.id, belt.updated_at.to_i].join('/')
+      Rails.cache.write(show_key, payload, expires_in: 6.hours)
+
+      render json: payload, status: :created
     rescue ActiveRecord::RecordInvalid => e
       raise e # Re-raise to be handled by rescue_from
     rescue StandardError => e
@@ -43,7 +70,17 @@ class Api::V1::BeltsController < Api::ApplicationController
   def show
     # GET /api/v1/belts/:id
     # Returns a single belt by ID.
-    render(json: @belt, serializer: BeltSerializer)
+    show_key = ['belt', @belt.id, @belt.updated_at.to_i].join('/')
+
+    payload = Rails.cache.fetch(show_key, expires_in: 6.hours) do
+      BeltJsonapiSerializer.new(@belt, include: [:technique_types, :'technique_types.techniques']).serializable_hash
+    end
+
+    etag = Digest::MD5.hexdigest(show_key)
+    last_modified = @belt.updated_at
+    return head(:not_modified) unless stale?(etag: etag, last_modified: last_modified)
+
+    render json: payload
   end
 
   def destroy
@@ -82,18 +119,38 @@ class Api::V1::BeltsController < Api::ApplicationController
         .symbolize_keys # Convert to symbol keys for easier handling
 
     if search_params.empty?
-      belts = Belt.all
+      belts = Belt.includes(:technique_types, :techniques, :belt_grades)
     else
       # Case-insensitive match for colour when provided; apply any additional filters afterwards
       if search_params[:colour].present?
         colour = search_params.delete(:colour)
-        belts = Belt.where("LOWER(colour) = ?", colour.to_s.downcase)
+        belts = Belt.where("LOWER(colour) = ?", colour.to_s.downcase).includes(:technique_types, :techniques, :belt_grades)
         belts = belts.where(search_params) if search_params.present?
       else
-        belts = Belt.where(search_params)
+        belts = Belt.where(search_params).includes(:technique_types, :techniques, :belt_grades)
       end
     end
-    render json: belts, each_serializer: BeltSerializer
+    # find action reuses index logic; use same caching strategy
+    last_belt_ts = belts.maximum(:updated_at)&.to_i
+    cache_key = [
+      'belts_find',
+      (params[:syllabus_id] || 'all'),
+      search_params.to_s,
+      last_belt_ts
+    ].join('/')
+
+    payload = Rails.cache.fetch(cache_key, expires_in: 6.hours) do
+      BeltJsonapiSerializer.new(
+        belts,
+        include: [:technique_types, :'technique_types.techniques']
+      ).serializable_hash
+    end
+
+    etag = Digest::MD5.hexdigest(cache_key)
+    last_modified = Time.at(last_belt_ts || 0)
+    return head(:not_modified) unless stale?(etag: etag, last_modified: last_modified)
+
+    render json: payload
   end
 
   private

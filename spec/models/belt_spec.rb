@@ -139,4 +139,30 @@ RSpec.describe Belt, type: :model do
       expect(belt_other_syllabus).to be_valid
     end
   end
+
+  describe "cache warming callbacks" do
+    let(:syllabus) { create(:syllabus) }
+
+    it "enqueues WarmSyllabusCacheJob on create" do
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      create(:belt, colour: "White", syllabus: syllabus)
+    end
+
+    it "enqueues WarmSyllabusCacheJob on update" do
+      belt = create(:belt, colour: "White", syllabus: syllabus)
+
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      belt.update(colour: "White") # just trigger update
+    end
+
+    it "enqueues WarmSyllabusCacheJob on destroy" do
+      belt = create(:belt, colour: "White", syllabus: syllabus)
+
+      expect(WarmSyllabusCacheJob).to receive(:perform_later).with(syllabus.id).at_least(:once)
+
+      belt.destroy
+    end
+  end
 end

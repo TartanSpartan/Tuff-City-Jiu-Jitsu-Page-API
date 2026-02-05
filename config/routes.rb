@@ -102,6 +102,7 @@ Rails.application.routes.draw do
         # get "/syllabi_full", {to: "syllabi#find_all_belts"}
         member do
           get "/user_grade_syllabus", { to: "syllabi#user_grade_syllabus" }
+          post "/warm_cache", to: "syllabi#warm_cache"
         end
       end
       # --- End Belt Routes ---

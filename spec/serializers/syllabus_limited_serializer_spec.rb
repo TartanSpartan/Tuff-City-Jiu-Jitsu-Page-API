@@ -95,7 +95,7 @@ RSpec.describe SyllabusLimitedSerializer, type: :serializer do
     expect(kyu_numbers).to eq(kyu_numbers.sort)
   end
 
-  it "includes relationships for techniques and technique_types on belts" do
+  it "includes relationships for technique_types on belts" do
     orange_belt = belt_for("Orange")
     create(
       :belt_grade,
@@ -112,7 +112,7 @@ RSpec.describe SyllabusLimitedSerializer, type: :serializer do
     json_api =
       serialize_json_api(
         described_class.new(syllabus, scope: { current_user: user }),
-        includes: ["belts", "belts.technique_types", "belts.techniques"]
+        includes: ["belts", "belts.technique_types"]
       )
 
     # Relationships are linkages; full belt resources are in `included`
@@ -122,10 +122,10 @@ RSpec.describe SyllabusLimitedSerializer, type: :serializer do
     serialized_target = included.find { |r| r["type"] == "belts" && r["id"] == target_belt.id.to_s }
     expect(serialized_target).to be_present
 
-    # Relationships should include techniques and technique_types keys on the included belt resource
+    # Relationships should include technique_types key on the included belt resource
+    # (BeltSerializer only exposes technique_types, not techniques or belt_grades)
     rels = serialized_target["relationships"]
-    expect(rels).to include("techniques", "technique_types")
-    expect(rels["techniques"]["data"]).to be_an(Array)
+    expect(rels).to include("technique_types")
     expect(rels["technique_types"]["data"]).to be_an(Array)
   end
 

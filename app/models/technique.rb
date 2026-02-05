@@ -50,6 +50,19 @@ class Technique < ApplicationRecord
 
   before_validation :titleize_summary
 
+  after_commit :enqueue_syllabus_warm
+
+  def enqueue_syllabus_warm
+    # technique -> technique_type -> syllabus
+    sid = technique_type&.syllabus_id
+    return unless sid
+    if Rails.env.development?
+      WarmSyllabusCacheJob.perform_now(sid)
+    else
+      WarmSyllabusCacheJob.perform_later(sid)
+    end
+  end
+
   # Validations
   validates :summary,
             presence: true,

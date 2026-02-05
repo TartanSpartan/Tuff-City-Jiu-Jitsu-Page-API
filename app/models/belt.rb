@@ -44,6 +44,17 @@ class Belt < ApplicationRecord
   before_validation :capitalize_colour
   before_validation :assign_kyu_number, on: :create
 
+  after_commit :enqueue_syllabus_warm
+
+  def enqueue_syllabus_warm
+    return unless syllabus_id
+    if Rails.env.development?
+      WarmSyllabusCacheJob.perform_now(syllabus_id)
+    else
+      WarmSyllabusCacheJob.perform_later(syllabus_id)
+    end
+  end
+
   validates :colour, presence: true
   validates :kyu_number, presence: true, numericality: { only_integer: true }
   validates :kyu_number,

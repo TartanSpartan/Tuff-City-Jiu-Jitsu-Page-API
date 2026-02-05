@@ -51,6 +51,9 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
 
+  # Run ActiveJob inline in test so jobs execute synchronously.
+  config.active_job.queue_adapter = :inline
+
   # config.middleware.use OmniAuth::Builder do
   #   provider :google_oauth2, Rails.application.credentials.dig(:API, :google_client_id), Rails.application.credentials.dig(:API, :google_client_secret), {
   #       scope: 'email profile',

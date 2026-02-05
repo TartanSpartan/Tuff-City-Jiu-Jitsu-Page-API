@@ -157,10 +157,9 @@ RSpec.describe BeltSerializer, type: :serializer do
 
     it "includes the relationships key in the top-level data" do
       expect(relationships).to be_present
+      # BeltSerializer only exposes technique_types relationship
       expect(relationships.keys).to contain_exactly(
-        "technique_types",
-        "techniques",
-        "belt_grades"
+        "technique_types"
       )
     end
 
@@ -172,22 +171,6 @@ RSpec.describe BeltSerializer, type: :serializer do
       expect(relationships["technique_types"]["data"].size).to eq(
         technique_types.size
       )
-    end
-
-    it "correctly serializes the techniques relationship" do
-      expect(relationships["techniques"]["data"].first["type"]).to eq(
-        "techniques"
-      )
-      expect(relationships["techniques"]["data"].first["id"]).to eq("1")
-      expect(relationships["techniques"]["data"].size).to eq(techniques.size)
-    end
-
-    it "correctly serializes the belt_grades relationship" do
-      expect(relationships["belt_grades"]["data"].first["type"]).to eq(
-        "belt_grades"
-      )
-      expect(relationships["belt_grades"]["data"].first["id"]).to eq("1")
-      expect(relationships["belt_grades"]["data"].size).to eq(belt_grades.size)
     end
   end
 
@@ -266,38 +249,28 @@ RSpec.describe BeltSerializer, type: :serializer do
   end
 
   describe "included resources and empty relationships" do
-    it "includes techniques and technique_types when requested and exposes their attributes" do
+    it "includes technique_types when requested and exposes their attributes" do
       # Use build_stubbed objects from FactoryBot so serializers can traverse associations
-      tt = build_stubbed(:technique_type)
-      tech =
-        build_stubbed(
-          :technique,
-          summary: "Single Leg Takedown",
-          technique_type: tt
-        )
-      bg = build_stubbed(:belt_grade)
+      tt = build_stubbed(:technique_type, category: "Grappling")
       belt_instance =
         build_stubbed(
           :belt,
-          technique_types: [tt],
-          techniques: [tech],
-          belt_grades: [bg]
+          technique_types: [tt]
         )
 
       parsed =
         serialize_json_api(
           described_class.new(belt_instance),
-          includes: %i[techniques technique_types belt_grades]
+          includes: %i[technique_types]
         )
       included = parsed["included"]
 
       types = included.map { |i| i["type"] }
-      expect(types).to include("techniques")
+      # BeltSerializer only exposes technique_types relationship
       expect(types).to include("technique_types")
-      expect(types).to include("belt_grades")
 
-      tech_inc = included.find { |i| i["type"] == "techniques" }
-      expect(tech_inc["attributes"]["summary"]).to eq("Single Leg Takedown")
+      tt_inc = included.find { |i| i["type"] == "technique_types" }
+      expect(tt_inc["attributes"]["category"]).to eq("Grappling")
     end
 
     it "handles empty relationships without error" do
@@ -310,9 +283,7 @@ RSpec.describe BeltSerializer, type: :serializer do
           syllabus_id: nil,
           created_at: Time.now,
           updated_at: Time.now,
-          technique_types: [],
-          techniques: [],
-          belt_grades: []
+          technique_types: []
         )
       allow(belt_empty).to receive(:class).and_return(Belt)
       allow(belt_empty).to receive(:read_attribute_for_serialization) { |attr|
@@ -321,9 +292,8 @@ RSpec.describe BeltSerializer, type: :serializer do
 
       parsed = serialize_json_api(described_class.new(belt_empty))
       relationships = parsed["data"]["relationships"]
-      expect(relationships["techniques"]["data"]).to eq([])
+      # BeltSerializer only exposes technique_types relationship
       expect(relationships["technique_types"]["data"]).to eq([])
-      expect(relationships["belt_grades"]["data"]).to eq([])
     end
   end
 

@@ -56,6 +56,10 @@ gem "faker"
 
 # Use Active Model Serializers to create serializers to correspond to models and controllers
 gem "active_model_serializers"
+gem "jsonapi-serializer"
+
+# Fast JSON encoder/decoder used to speed up `to_json` and parsing
+gem "oj"
 
 # Try for code formatter
 gem "syntax_tree"
@@ -105,3 +109,15 @@ group :development, :test do
 end
 
 gem "ruby-lsp", "~> 0.26.2", :group => :development
+
+group :development do
+  # Performance and N+1 detection during development
+  gem "rack-mini-profiler"
+  gem "bullet"
+end
+
+group :development, :production do
+  # Skylight APM for performance insights in development and production
+  # Set SKYLIGHT_AUTHENTICATION env var or config/skylight.yml
+  gem "skylight"
+end
